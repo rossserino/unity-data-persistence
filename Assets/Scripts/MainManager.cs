@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -11,6 +12,7 @@ public class MainManager : MonoBehaviour
     public Rigidbody Ball;
 
     public Text ScoreText;
+    public Text HighScoreText;
     public GameObject GameOverText;
     
     private bool m_Started = false;
@@ -36,6 +38,10 @@ public class MainManager : MonoBehaviour
                 brick.onDestroyed.AddListener(AddPoint);
             }
         }
+        LoadScore();
+
+        HighScoreText.text = $"Best Score : { Persistence.Instance.highScorePlayerName } {Persistence.Instance.highScore}";
+        
     }
 
     private void Update()
@@ -65,6 +71,12 @@ public class MainManager : MonoBehaviour
     void AddPoint(int point)
     {
         m_Points += point;
+        if (m_Points > Persistence.Instance.highScore)
+        {
+            Persistence.Instance.highScore = m_Points;
+            Persistence.Instance.highScorePlayerName = Persistence.Instance.playerName;
+            HighScoreText.text = $"Best Score : { Persistence.Instance.highScorePlayerName } {Persistence.Instance.highScore}";
+        }
         ScoreText.text = $"Score : {m_Points}";
     }
 
@@ -72,5 +84,37 @@ public class MainManager : MonoBehaviour
     {
         m_GameOver = true;
         GameOverText.SetActive(true);
+        SaveScore();
+    }
+
+    [System.Serializable]
+    class SaveData
+    {
+        public string playerName;
+        public int highScore;
+    }
+
+    public void SaveScore()
+    {
+        SaveData data = new SaveData();
+        data.playerName = Persistence.Instance.highScorePlayerName;
+        data.highScore = Persistence.Instance.highScore;
+
+        string json = JsonUtility.ToJson(data);
+
+        File.WriteAllText(Application.persistentDataPath + "/savefile.json", json);
+    }
+
+    public void LoadScore()
+    {
+        string path = Application.persistentDataPath + "/savefile.json";
+        if (File.Exists(path))
+        {
+            string json = File.ReadAllText(path);
+            SaveData data = JsonUtility.FromJson<SaveData>(json);
+
+            Persistence.Instance.highScorePlayerName = data.playerName;
+            Persistence.Instance.highScore = data.highScore;
+        }
     }
 }
